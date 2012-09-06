@@ -1,6 +1,3 @@
---Activity 2 - Sets
---Eric Faurie
-
 --Add, which takes a value x and adds it to the list xx
 add x xx = x:xx
 
@@ -11,9 +8,8 @@ union xx yy = xx ++ [y | y <- yy, y `notElem` xx]
 intersect xx yy = [x | x <- xx, x `elem` yy]
 
 --powerset, returns the powerset of xx
-powerset :: [a] -> [[a]]
 powerset [] = [[]]
-powerset (x:xs) = xss ++ map (x:) xss where xss = powerset xs
+powerset (x:xs) = concat [ [s, x:s] | s <- powerset xs ]
 
 --fibonacci direct style
 fibonacci 0 = 0
