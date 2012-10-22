@@ -100,6 +100,34 @@ removeBlock (x:xs) = if x /= ";"
                        then removeBlock xs
                        else (tail xs)
 
+--remove the false condition, remove words else -> then
+removeFalse xs =  removeBetween "else" "then" [] xs
+--remove the true condition, remove words head -> else, and remove then
+removeTrue xs = removeWord "then" [] (removeBefore "else" xs)
+
+removeBetween str1 str2 pre [] = error "Ran out of args"
+removeBetween str1 str2 pre [x] = if x == str2
+                                    then pre
+                                    else error "Ran out of args"
+removeBetween str1 str2 pre (x:xs) = if x == str1
+                                   then pre ++ removeBefore str2 (x:xs)
+                                   else removeBetween str1 str2 (pre ++ [x]) xs
+
+removeBefore str [] = error "Ran out of args"
+removeBefore str [x] = if x == str
+                         then []
+                         else error "Ran out of args"
+removeBefore str (x:xs) = if x == str
+                             then xs
+                             else removeBefore str xs
+
+removeWord str pre [] = error "Ran out of args"
+removeWord str pre [x] = if x == str
+                           then pre
+                           else error "Ran out of args"
+removeWord str pre (x:xs) = if x == str
+                              then pre ++ xs
+                              else removeWord str (pre ++ [x]) xs
 
 -- Initial Dictionary
 
@@ -130,8 +158,6 @@ eval words (istack, cstack, dict) =
   case dlookup (head words) dict of
     Num i        -> eval xs (i:istack, cstack, dict)
     Prim f       -> eval xs (f istack, cstack, dict)
-    --if its a user defined word
-    --leave the integer stack alone, add word to call stack
     Def str      -> eval (str ++ xs) (istack, cstack, dict)
     Unknown "."  -> do { putStrLn $ show (head istack);
                              eval xs (tail istack, cstack, dict) }
@@ -141,6 +167,9 @@ eval words (istack, cstack, dict) =
                              args = grabArgs (tail xs)
                              rs = removeBlock (tail xs)
                          in eval rs (istack, cstack, (dinsert name (Def args) dict)) } 
+    Unknown "if" -> do { if (-1) == head istack
+                           then eval (removeFalse xs) ((tail istack), cstack, dict);
+                           else eval (removeTrue xs) ((tail istack), cstack, dict); }
   where xs = tail words
 
 repl :: ForthState -> IO ForthState
