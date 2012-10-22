@@ -1,3 +1,7 @@
+--Eric Faurie
+--CS440 MP1 - Forth
+--22 OCT 2012
+
 import Data.HashMap.Strict as H
 
 -- Initial types
@@ -129,6 +133,18 @@ removeWord str pre (x:xs) = if x == str
                               then pre ++ xs
                               else removeWord str (pre ++ [x]) xs
 
+loopLogic xs = removeAfter "again" [] xs
+
+--removes after str but leaves str as part of the list
+removeAfter str pre [] = error "Ran out of args!"
+removeAfter str pre [x] = if x == str
+                            then (pre ++ [x])
+                            else error "Ran out of args!"
+removeAfter str pre (x:xs) = if x == str
+                               then (pre ++ [x])
+                               else removeAfter str (pre ++ [x]) xs
+
+
 -- Initial Dictionary
 
 dictionary1 = dinsert "+" (Prim $ wrap2 (+)) H.empty
@@ -170,6 +186,9 @@ eval words (istack, cstack, dict) =
     Unknown "if" -> do { if (-1) == head istack
                            then eval (removeFalse xs) ((tail istack), cstack, dict);
                            else eval (removeTrue xs) ((tail istack), cstack, dict); }
+    Unknown "begin" -> eval xs (istack, (loopLogic xs):cstack, dict)
+    Unknown "again" -> eval ((head cstack) ++ xs) (istack, cstack, dict)
+    Unknown "exit" -> eval (removeBefore "again" xs) (istack, (tail cstack), dict)
   where xs = tail words
 
 repl :: ForthState -> IO ForthState
