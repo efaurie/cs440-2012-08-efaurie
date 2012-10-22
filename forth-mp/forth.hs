@@ -45,9 +45,50 @@ dinsert key val dict =
       Nothing -> H.insert key [val] dict
       Just x  -> H.insert key (val:x) dict
 
+dinsert' (key, val, dict) = 
+   case H.lookup key dict of
+      Nothing -> H.insert key [val] dict
+      Just x -> H.insert key (val:x) dict
+
+--My Helper Functions
+printStack [] = error "The stack is empty!"
+printStack xs = print (myReverse xs)
+
+myReverse list = myReverse' list []
+   where
+     myReverse' [] reversed = reversed
+     myReverse' (x:xs) reversed = myReverse' xs (x:reversed)
+
+dup [] = error "Stack is empty! No element to duplicate!"
+dup [x] = [x] ++ [x]
+dup (x:xs) = x:x:xs
+
+swap [] = error "No elements in the stack! Can't swap!"
+swap [x] = [x]
+swap [x,y] = [y,x]
+swap (x:y:xs) = y:x:xs
+
+drop [] = error "No elements in the stack! Can't drop!"
+drop [x] = []
+drop (x:xs) = xs
+
+rot [] = error "No elements in the list! Can't rotate!"
+rot [x] = [x]
+rot xs = (last xs):(init xs)
+
 -- Initial Dictionary
 
-dictionary = dinsert "+" (Prim $ wrap2 (+)) H.empty
+dictionary1 = dinsert "+" (Prim $ wrap2 (+)) H.empty
+dictionary2 = dinsert "-" (Prim $ wrap2 (-)) dictionary1
+dictionary3 = dinsert "*" (Prim $ wrap2 (*)) dictionary2
+dictionary4 = dinsert "dup" (Prim dup) dictionary3
+dictionary5 = dinsert "swap" (Prim swap) dictionary4
+dictionary6 = dinsert "drop" (Prim Main.drop) dictionary5
+dictionary7 = dinsert "rot" (Prim rot) dictionary6
+dictionary = dinsert "/" (Prim $ wrap2 (div)) dictionary7
+--want to get
+--dinsert "/" (Prim $ wrap2 (div)) (dinsert ("*" (Prim $ wrap2 (*)) (
+--dinsert "-" (Prim $ wrap2 (-)) (dinsert "+" (Prim $ wrap2 (+)) H.empty))))
 
 -- The Evaluator
 
@@ -59,6 +100,8 @@ eval words (istack, cstack, dict) =
     Prim f       -> eval xs (f istack, cstack, dict)
     Unknown "."  -> do { putStrLn $ show (head istack);
                              eval xs (tail istack, cstack, dict) }
+    Unknown ".S"  -> do { printStack istack;
+                         eval xs (istack, cstack, dict) }
   where xs = tail words
 
 repl :: ForthState -> IO ForthState
