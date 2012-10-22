@@ -27,8 +27,9 @@ instance Show Entry where
   show (Unknown s) = "Unknown: " ++ s
 
 -- Dictionary helpers
-
-wrap2 f (x:y:xs) = (f x y):xs
+--this causes problems with the writeup as to order of eval
+-- original: wrap2 f (x:y:xs) = (f x y):xs
+wrap2 f (x:y:xs) = (f y x):xs
 wrap2 f _ = error "Value stack underflow!"
 
 dlookup :: String -> Dictionary -> Entry
@@ -76,6 +77,30 @@ rot [] = error "No elements in the list! Can't rotate!"
 rot [x] = [x]
 rot xs = (last xs):(init xs)
 
+wrap2C f (x:y:xs) = if (f y x) == True
+                      then [-1] ++ xs
+                      else [0] ++ xs
+wrap2C f _ = error "Value stack underflow!"
+
+--takes a string and returns a string of all tokens before the ;
+grabArgs [] = error "Didn't find a semicolon, ran out of arguments!"
+grabArgs [x] = if x /= ";"
+                then [x]
+                else []
+grabArgs (x:xs) = if x /= ";"
+                    then [x] ++ grabArgs xs
+                    else []
+
+--remove block takes a list and returns the list after the semicolon
+removeBlock [] = error "Didn't find a semicolon, ran out of arguments!"
+removeBlock [x] = if x /= ";"
+                    then error "Didn't find a semicolon, ran out of arguments!"
+                    else []
+removeBlock (x:xs) = if x /= ";"
+                       then removeBlock xs
+                       else (tail xs)
+
+
 -- Initial Dictionary
 
 dictionary1 = dinsert "+" (Prim $ wrap2 (+)) H.empty
@@ -85,10 +110,17 @@ dictionary4 = dinsert "dup" (Prim dup) dictionary3
 dictionary5 = dinsert "swap" (Prim swap) dictionary4
 dictionary6 = dinsert "drop" (Prim Main.drop) dictionary5
 dictionary7 = dinsert "rot" (Prim rot) dictionary6
-dictionary = dinsert "/" (Prim $ wrap2 (div)) dictionary7
+dictionary8 = dinsert "<" (Prim $ wrap2C (<)) dictionary7
+dictionary9 = dinsert ">" (Prim $ wrap2C (>)) dictionary8
+dictionary10 = dinsert "/=" (Prim $ wrap2C ((/=))) dictionary9
+dictionary11 = dinsert "==" (Prim $ wrap2C ((==))) dictionary10
+dictionary12 = dinsert "<=" (Prim $ wrap2C ((<=))) dictionary11
+dictionary13 = dinsert ">=" (Prim $ wrap2C ((>=))) dictionary12
+dictionary = dinsert "/" (Prim $ wrap2 (div)) dictionary13
 --want to get
 --dinsert "/" (Prim $ wrap2 (div)) (dinsert ("*" (Prim $ wrap2 (*)) (
 --dinsert "-" (Prim $ wrap2 (-)) (dinsert "+" (Prim $ wrap2 (+)) H.empty))))
+--Should be able to use some form of HOF or something
 
 -- The Evaluator
 
@@ -98,10 +130,17 @@ eval words (istack, cstack, dict) =
   case dlookup (head words) dict of
     Num i        -> eval xs (i:istack, cstack, dict)
     Prim f       -> eval xs (f istack, cstack, dict)
+    --if its a user defined word
+    --leave the integer stack alone, add word to call stack
+    Def str      -> eval (str ++ xs) (istack, cstack, dict)
     Unknown "."  -> do { putStrLn $ show (head istack);
                              eval xs (tail istack, cstack, dict) }
-    Unknown ".S"  -> do { printStack istack;
+    Unknown ".S" -> do { printStack istack;
                          eval xs (istack, cstack, dict) }
+    Unknown ":"  -> do { let name = head xs
+                             args = grabArgs (tail xs)
+                             rs = removeBlock (tail xs)
+                         in eval rs (istack, cstack, (dinsert name (Def args) dict)) } 
   where xs = tail words
 
 repl :: ForthState -> IO ForthState
