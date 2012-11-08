@@ -14,24 +14,37 @@ run x = parseTest x
 adigit = oneOf ['0'..'9']
 digits = many1 adigit
 
+avarstart = "-*+/:'?><=" ++ concat [['a'..'z'], ['A'..'Z']]
+
+avar = do oneOf avarstart
+          many (oneOf (avarstart ++ ['0'..'9']))
+
 -- Grammaticals
 
 anInt = do d <- digits
            return $ IntExp (read d)
 
-anAtom = anInt
+aSym = do s <- avar
+          return $ SymExp s
 
-anExp = anAtom
+anAtom = try anInt
+         <|> aSym
+
+anExp = anAtom 
 
 -- Evaluator
 
 eval :: Exp -> [(String,Val)] -> Val
 eval (IntExp i) env = IntVal i
+eval (SymExp s) env = SymVal s
+
 
 -- Printer
 
 instance Show Val where
   show (IntVal i) = show i
+  --show the loopup for s
+  show (SymVal s) = s
 
 repl defs =
   do putStr "> "
