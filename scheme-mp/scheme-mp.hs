@@ -16,8 +16,9 @@ digits = many1 adigit
 
 avarstart = "-*+/:'?><=" ++ concat [['a'..'z'], ['A'..'Z']]
 
-avar = do oneOf avarstart
-          many (oneOf (avarstart ++ ['0'..'9']))
+avar = do first <- oneOf avarstart
+          rest <- many (oneOf (avarstart ++ ['0'..'9']))
+          return ([first] ++ rest)
 
 -- Grammaticals
 
@@ -36,8 +37,9 @@ anExp = anAtom
 
 eval :: Exp -> [(String,Val)] -> Val
 eval (IntExp i) env = IntVal i
-eval (SymExp s) env = SymVal s
-
+eval (SymExp s) env = do case (lookup s env) of
+                           Just n -> n
+                           Nothing -> error ("Symbol " ++ s ++ " has no value.")
 
 -- Printer
 
